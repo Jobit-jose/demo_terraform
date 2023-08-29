@@ -2,7 +2,7 @@ terraform {
     required_providers {
         aws = {
             source = "hashicorp/aws"
-            version = ">= 3.0"
+            version = ">= 5.0"
         }
     }
 }
@@ -12,12 +12,29 @@ provider "aws" {
 }
 
 resource "aws_instance" "web" {
-  ami           = "ami-053b0d53c279acc90" 
+  ami = "ami-0261755bbcb8c4a84" 
   security_groups = ["${aws_security_group.web-sg.name}"]
   instance_type = "t2.micro"
-
-    tags = {
+  key_name = "terraform_key"
+  tags = {
     Name = "terraform"
+  }
+
+
+  provisioner "remote-exec" {
+    inline = [ 
+            "sudo apt update -y",   
+            "sudo apt install -y apache2",  
+            "sudo systemctl start apache2", 
+            "sudo systemctl enable apache2"
+    ]
+  }
+
+  connection {
+    type = "ssh"
+    user = "ubuntu"
+    private_key = file("terraform_key.pem")
+    host = "${self.public_ip}"
   }
 }
 
@@ -26,7 +43,6 @@ resource "aws_security_group" "web-sg" {
   description = "security group"
 
   ingress {
-    description      = "TLS from VPC"
     from_port        = 22
     to_port          = 22
     protocol         = "tcp"
@@ -34,7 +50,6 @@ resource "aws_security_group" "web-sg" {
   }  
 
   ingress {
-    description      = "TLS from VPC"
     from_port        = 80
     to_port          = 80
     protocol         = "tcp"
@@ -42,7 +57,6 @@ resource "aws_security_group" "web-sg" {
   } 
 
   ingress {
-    description      = "TLS from VPC"
     from_port        = 443
     to_port          = 443
     protocol         = "tcp"
